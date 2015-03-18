@@ -22,7 +22,7 @@ var toMarkdown = function(string) {
     {
       patterns: 'br',
       type: 'void',
-      replacement: '\n'
+      replacement: '  \n'
     },
     {
       patterns: 'h([1-6])',
@@ -72,7 +72,7 @@ var toMarkdown = function(string) {
         var src = attrs.match(attrRegExp('src')),
             alt = attrs.match(attrRegExp('alt')),
             title = attrs.match(attrRegExp('title'));
-        return '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')';
+        return src ? '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : '';
       }
     }
   ];
@@ -109,7 +109,7 @@ var toMarkdown = function(string) {
 
   // Pre code blocks
 
-  string = string.replace(/<pre\b[^>]*>`([\s\S]*)`<\/pre>/gi, function(str, innerHTML) {
+  string = string.replace(/<pre\b[^>]*>`([\s\S]*?)`<\/pre>/gi, function(str, innerHTML) {
     var text = he.decode(innerHTML);
     text = text.replace(/^\t+/g, '  '); // convert tabs to spaces (you know it makes sense)
     text = text.replace(/\n/g, '\n    ');
@@ -149,9 +149,11 @@ var toMarkdown = function(string) {
             return prefix + innerHTML;
           });
         }
+        lis[i] = lis[i].replace(/(.) +$/m, '$1');
       }
       return lis.join('\n');
     });
+
     return '\n\n' + html.replace(/[ \t]+\n|\s+$/g, '');
   }
 
