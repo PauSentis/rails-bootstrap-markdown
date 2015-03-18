@@ -444,9 +444,7 @@
       } else {
         // Set the content
         var val = this.$textarea.val();
-        if(typeof markdown == 'object') {
-          content = markdown.toHTML(val);
-        }else if(typeof marked == 'function') {
+        if(typeof marked == 'function') {
           content = marked(val);
         } else {
           content = val;
