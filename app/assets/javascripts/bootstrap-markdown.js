@@ -1111,6 +1111,21 @@
             // Prepend/Give - surround the selection
             var chunk, cursor, selected = e.getSelection(), content = e.getContent()
 
+            var lines_pos = [0]
+            var total = 0
+            $.each(content.split("\n"), function( index, value ) {
+              total = total + value.length
+              lines_pos[index+1] = total
+            });
+
+            $.each(lines_pos, function( index, value ) {
+              if (value > selected.start){
+                e.setSelection(lines_pos[index-1]+index-1, selected.end)
+                selected = e.getSelection()
+                return false
+              }
+            });
+            
             // transform selection and set the cursor into chunked text
             if (selected.length == 0) {
               // Give extra word
@@ -1122,8 +1137,14 @@
             } else {
               if (selected.text.indexOf('\n') < 0) {
                 chunk = selected.text
+                
+                if (/^\s*\d*[.]\s.*/.test(chunk)) {
+                  chunk = chunk.replace(/^\s*\d*[.]\s*/, '')
+                } else{
+                  chunk = '1. '+chunk
+                }
 
-                e.replaceSelection('1. '+chunk)
+                e.replaceSelection(chunk)
 
                 // Set the cursor
                 cursor = selected.start+3
@@ -1132,12 +1153,25 @@
 
                 list = selected.text.split('\n')
                 chunk = list[0]
-
+                
+                var ordered_list = true
+                
                 $.each(list,function(k,v) {
-                  list[k] = (k+1).toString()+'. '+v
+                  if (!/^\s*\d*[.]\s.*/.test(list[k])) {
+                    ordered_list = false
+                    return false
+                  }
+                })
+                
+                $.each(list,function(k,v) {
+                  v = v.replace(/^\s*\d*[.]\s*/, '')
+                  if (!ordered_list) {
+                    v = (k+1).toString()+'. '+v
+                  }
+                  list[k] = v
                 })
 
-                e.replaceSelection('\n\n'+list.join('\n'))
+                e.replaceSelection(list.join('\n'))
 
                 // Set the cursor
                 cursor = selected.start+5
