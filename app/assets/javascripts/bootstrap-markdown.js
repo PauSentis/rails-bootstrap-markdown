@@ -1061,44 +1061,82 @@
           icon: { glyph: 'glyphicon glyphicon-list', fa: 'fa fa-list', 'fa-3': 'icon-list-ul' },
           callback: function(e){
             // Prepend/Give - surround the selection
-            var chunk, cursor, selected = e.getSelection(), content = e.getContent()
+            var chunk, selected = e.getSelection(), content = e.getContent()
 
+            var lines_pos = [0]
+            var total = 0
+            $.each(content.split("\n"), function( index, value ) {
+              total = total + value.length
+              lines_pos[index+1] = total
+            });
+            
+            if (selected.length > 0 && content[selected.end-1] == "\n"){
+              selected.end = selected.end -2
+            } else { 
+              if (content[selected.end] == "\n"){
+                selected.end = selected.end -1
+                if (selected.length == 0) {
+                  selected.start = selected.start -1
+                }
+              }
+            }
+
+            var start = 0, start_assigned = false
+
+            $.each(lines_pos, function( index, value ) {
+              if (!start_assigned && value+index-1 > selected.start){
+                start = lines_pos[index-1]+index-1
+                start_assigned=true
+              }
+              if (lines_pos.length == index+1 || (start_assigned && value+index-1 > selected.end)){
+                e.setSelection(start, lines_pos[index]+index-1)
+                selected = e.getSelection()
+                return false
+              }
+            });
+            
             // transform selection and set the cursor into chunked text
             if (selected.length == 0) {
-              // Give extra word
-              chunk = e.__localize('list text here')
-
-              e.replaceSelection('- '+chunk)
-              // Set the cursor
-              cursor = selected.start+2
-
+              e.replaceSelection('- ')
+              e.setSelection(selected.start+2, selected.start+2)
             } else {
               if (selected.text.indexOf('\n') < 0) {
                 chunk = selected.text
+                
+                if (/^\s*[-]\s.*/.test(chunk)) {
+                  chunk = chunk.replace(/^\s*[-]\s*/, '')
+                } else{
+                  chunk = '- '+chunk
+                }
 
-                e.replaceSelection('- '+chunk)
-
-                // Set the cursor
-                cursor = selected.start+2
+                e.replaceSelection(chunk)
               } else {
                 var list = []
 
                 list = selected.text.split('\n')
                 chunk = list[0]
 
+                var ordered_list = true
+                
                 $.each(list,function(k,v) {
-                  list[k] = '- '+v
+                  if (!/^\s*[-]\s.*/.test(list[k])) {
+                    ordered_list = false
+                    return false
+                  }
+                })
+                
+                $.each(list,function(k,v) {
+                  v = v.replace(/^\s*[-]\s*/, '')
+                  if (!ordered_list) {
+                    v = '- '+v
+                  }
+                  list[k] = v
                 })
 
-                e.replaceSelection('\n\n'+list.join('\n'))
-
-                // Set the cursor
-                cursor = selected.start+4
+                e.replaceSelection(list.join('\n'))
               }
+              e.setSelection(selected.start,selected.start)
             }
-
-            // Set the cursor
-            e.setSelection(cursor,cursor+chunk.length)
           }
         },
         {
@@ -1109,7 +1147,7 @@
           callback: function(e) {
 
             // Prepend/Give - surround the selection
-            var chunk, cursor, selected = e.getSelection(), content = e.getContent()
+            var chunk, selected = e.getSelection(), content = e.getContent()
 
             var lines_pos = [0]
             var total = 0
@@ -1117,37 +1155,59 @@
               total = total + value.length
               lines_pos[index+1] = total
             });
-
+            
+            if (selected.length > 0 && content[selected.end-1] == "\n"){
+              selected.end = selected.end -2
+            } else { 
+              if (content[selected.end] == "\n"){
+                selected.end = selected.end -1
+                if (selected.length == 0) {
+                  selected.start = selected.start -1
+                }
+              }
+            }
+            
+            var start = 0, start_assigned = false
+            var currentNumber = 0
+            
             $.each(lines_pos, function( index, value ) {
-              if (value > selected.start){
-                e.setSelection(lines_pos[index-1]+index-1, selected.end)
+              if (!start_assigned && value+index-1 > selected.start){
+                start = lines_pos[index-1]+index-1
+                start_assigned=true
+                if(index > 1) {
+                  var previousLine = content.substring(lines_pos[index-2]+index-2, lines_pos[index-1]+index-3)
+                  if (/^\s*\d+[.]/.test(previousLine)) {
+                    currentNumber = parseInt(previousLine.match(/^\s*\d+/)[0].replace(/\s*/, ''))
+                  }
+                } 
+              }
+              if (lines_pos.length == index+1 || (start_assigned && value+index-1 > selected.end)){
+                e.setSelection(start, lines_pos[index]+index-1)
                 selected = e.getSelection()
                 return false
               }
             });
             
+            
+            
             // transform selection and set the cursor into chunked text
             if (selected.length == 0) {
-              // Give extra word
-              chunk = e.__localize('list text here')
-              e.replaceSelection('1. '+chunk)
-              // Set the cursor
-              cursor = selected.start+3
-
+              var text = (currentNumber+1)+'. '
+              e.replaceSelection(text)
+              
+              var cursor = selected.start + text.length
+              e.setSelection(cursor, cursor)
             } else {
               if (selected.text.indexOf('\n') < 0) {
                 chunk = selected.text
                 
-                if (/^\s*\d*[.]\s.*/.test(chunk)) {
-                  chunk = chunk.replace(/^\s*\d*[.]\s*/, '')
+                if (/^\s*\d+[.]\s.*/.test(chunk)) {
+                  chunk = chunk.replace(/^\s*\d+[.]\s*/, '')
                 } else{
-                  chunk = '1. '+chunk
+                  chunk = (currentNumber+1)+'. '+chunk
                 }
 
                 e.replaceSelection(chunk)
-
-                // Set the cursor
-                cursor = selected.start+3
               } else {
                 var list = []
 
@@ -1157,29 +1217,26 @@
                 var ordered_list = true
                 
                 $.each(list,function(k,v) {
-                  if (!/^\s*\d*[.]\s.*/.test(list[k])) {
+                  if (!/^\s*\d+[.]\s.*/.test(list[k])) {
                     ordered_list = false
                     return false
                   }
                 })
                 
                 $.each(list,function(k,v) {
-                  v = v.replace(/^\s*\d*[.]\s*/, '')
+                  v = v.replace(/^\s*\d+[.]\s*/, '')
                   if (!ordered_list) {
-                    v = (k+1).toString()+'. '+v
+                    v = (currentNumber+1+k).toString()+'. '+v
                   }
                   list[k] = v
                 })
 
                 e.replaceSelection(list.join('\n'))
-
-                // Set the cursor
-                cursor = selected.start+5
               }
+              e.setSelection(selected.start,selected.start)
             }
 
-            // Set the cursor
-            e.setSelection(cursor,cursor+chunk.length)
+            
           }
         },
         {
